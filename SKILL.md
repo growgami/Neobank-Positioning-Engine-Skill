@@ -1,5 +1,5 @@
 ---
-name: positioning-engine
+name: neobank-positioning-engine-skill
 description: Analyze crypto neobank positioning against competitors, find unclaimed territory, and generate a messaging framework. Use when a neobank needs to differentiate or when auditing a prospect's positioning.
 ---
 

@@ -1,5 +1,7 @@
 # Neobank Positioning Engine
 
+> **Install as an agent skill:** `npx skills add growgami/Neobank-Positioning-Engine-Skill`
+
 **Find out what your competitors actually claim, what territory they leave open, and exactly how to position against them.**
 
 The Positioning Engine scrapes crypto neobank websites, extracts every positioning signal (headlines, value props, CTAs, proof points, brand voice, and — critically — what they *don't* say), maps the competitive landscape, identifies unclaimed territory, and generates a complete messaging framework with real copy you can use.
@@ -47,8 +49,8 @@ Scrape  →  Analyze  →  Render
 
 ```bash
 # Clone the repo
-git clone https://github.com/growgami/neobank-positioning-engine.git
-cd neobank-positioning-engine
+git clone https://github.com/growgami/Neobank-Positioning-Engine-Skill.git
+cd Neobank-Positioning-Engine-Skill
 
 # Install dependencies
 pip install -r requirements.txt
@@ -89,7 +91,13 @@ python scripts/render_positioning.py output/kast-brief.json
 
 ---
 
-## Using It as a Claude Code Skill
+## Install as an Agent Skill
+
+Add the skill to any supported AI coding agent ([40+ supported](https://github.com/vercel-labs/skills)):
+
+```bash
+npx skills add growgami/Neobank-Positioning-Engine-Skill
+```
 
 If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the included `SKILL.md` turns the engine into an interactive skill. Claude follows the full workflow with you in the loop — you can steer the analysis, ask follow-up questions, and refine the output before rendering.
 
