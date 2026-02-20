@@ -1,122 +1,158 @@
 # Neobank Positioning Engine
 
-Scrapes crypto neobank websites, maps the competitive landscape, finds unclaimed positioning territory, and generates a complete messaging framework with real copy.
+**Find out what your competitors actually claim, what territory they leave open, and exactly how to position against them.**
 
-Not a brand strategy template. Every output is grounded in what competitors actually say, what users actually complain about, and what territory is genuinely unclaimed.
+The Positioning Engine scrapes crypto neobank websites, extracts every positioning signal (headlines, value props, CTAs, proof points, brand voice, and — critically — what they *don't* say), maps the competitive landscape, identifies unclaimed territory, and generates a complete messaging framework with real copy you can use.
 
-## What It Does
+This isn't a brand strategy template. Every recommendation traces back to what competitors actually say on their websites and what positioning territory is genuinely unclaimed.
 
-Give it a company name and its competitors. It will:
+---
 
-1. **Scrape** positioning data from each company's website (headlines, value props, CTAs, proof points, brand voice)
-2. **Analyze** positioning elements via an LLM: extract claims, map territories, find white space
-3. **Generate** a full messaging framework: positioning statements, one-liners, value props, audience-specific copy, what not to say, competitive responses
-4. **Render** everything as a styled HTML/PDF brief
+## What You Get
 
-## Quick Start
+A positioning brief covering:
 
-### Installation
+- **Executive Summary** — The one-paragraph strategic read. Where you stand, what's working, what's not, and the single biggest opportunity.
+- **Positioning Elements** — For each company analyzed: claims, target audience, benefits, proof points, brand voice, CTA language, and omissions (what they *don't* mention is often more revealing).
+- **Territory Map** — Every company scored on four dimensions: audience spectrum (crypto-native vs mainstream), trust model (self-custody vs custodial), value proposition core (yield vs utility), and brand personality (technical vs lifestyle).
+- **White Space Analysis** — Positioning territories that are unclaimed or weakly held, with evidence for each.
+- **Messaging Framework** — Positioning statements (Geoffrey Moore format), one-liner options, value propositions with proof points, audience-specific messaging, what NOT to say, and competitive response playbooks.
+
+The output is a structured JSON file that renders into a styled HTML/PDF brief.
+
+---
+
+## How It Works
+
+Three stages, fully automated:
+
+```
+Scrape  →  Analyze  →  Render
+```
+
+1. **Scrape** — A headless browser visits each company's website and pulls positioning data: headlines, subheadlines, meta descriptions, CTAs, body copy, and proof points.
+2. **Analyze** — The scraped data is fed to Claude (Anthropic's AI) along with positioning frameworks and competitive intelligence. The AI performs the full analysis: extracting positioning elements, mapping territories, finding white space, and generating the messaging framework.
+3. **Render** — The structured brief is rendered as a clean HTML document and PDF.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Python 3.10+** — [Download Python](https://www.python.org/downloads/) if you don't have it
+- **An API key** — Either an [Anthropic API key](https://console.anthropic.com/) or an [OpenRouter API key](https://openrouter.ai/)
+
+### Setup
 
 ```bash
+# Clone the repo
+git clone https://github.com/growgami/neobank-positioning-engine.git
+cd neobank-positioning-engine
+
+# Install dependencies
 pip install -r requirements.txt
 playwright install chromium
-```
 
-Copy `.env.example` to `.env` and add at least one API key:
-
-```bash
+# Add your API key
 cp .env.example .env
-# Edit .env with your ANTHROPIC_API_KEY or OPENROUTER_API_KEY
+# Open .env and paste your ANTHROPIC_API_KEY or OPENROUTER_API_KEY
 ```
 
-### Two Ways to Use It
+### Run It
 
-#### Path A: Automated Pipeline (API-powered)
-
-Run the full pipeline in one command:
+**One command, full pipeline:**
 
 ```bash
 python scripts/run_pipeline.py "KAST" "https://kast.xyz" \
   --competitors "Revolut:https://revolut.com" "Crypto.com:https://crypto.com"
 ```
 
-Or run each stage separately:
+This scrapes all websites, runs the analysis, and renders the brief. Output lands in `output/`.
+
+**Or run each stage separately** (useful if you want to re-analyze without re-scraping):
 
 ```bash
-# 1. Scrape target and competitors
+# Scrape
 python scripts/scrape_positioning.py "KAST" "https://kast.xyz"
 python scripts/scrape_positioning.py "Revolut" "https://revolut.com"
-python scripts/scrape_positioning.py "Crypto.com" "https://crypto.com"
 
-# 2. Analyze (calls Claude API to generate the brief)
+# Analyze
 python scripts/analyze_positioning.py output/kast-positioning.json \
-  --competitors revolut crypto-com
+  --competitors revolut
 
-# 3. Render HTML/PDF
+# Render
 python scripts/render_positioning.py output/kast-brief.json
 ```
 
-**Cost:** ~$0.10-0.35 per run depending on model and number of competitors.
+**Cost:** Each run costs roughly **$0.10–0.35** in API fees, depending on the model and number of competitors.
 
-#### Path B: Claude Code Skill (interactive)
+---
 
-If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the `SKILL.md` file turns this into an interactive skill. Claude follows the full workflow — scraping, analysis, and rendering — with you in the loop.
+## Using It as a Claude Code Skill
 
-Tell Claude:
-- `position [neobank name]`
-- `positioning audit for [neobank name]`
-- `competitive positioning: [neobank A] vs [neobank B] vs [neobank C]`
+If you use [Claude Code](https://docs.anthropic.com/en/docs/claude-code), the included `SKILL.md` turns the engine into an interactive skill. Claude follows the full workflow with you in the loop — you can steer the analysis, ask follow-up questions, and refine the output before rendering.
 
-Claude runs the scraper, reads the data, performs the analysis conversationally (you can steer it), and renders the output.
+```
+> position KAST against Revolut and Crypto.com
+```
+
+Claude will scrape, analyze, and render, pausing for your input at each stage. This is how the example briefs in this repo were produced.
+
+---
 
 ## API Providers
 
-The analyzer supports two providers:
+| Provider | Env Variable | Default Model | Cost per Run |
+|----------|-------------|---------------|-------------|
+| **Anthropic** (recommended) | `ANTHROPIC_API_KEY` | Claude Sonnet 4.5 | ~$0.10–0.20 |
+| **OpenRouter** (alternative) | `OPENROUTER_API_KEY` | Claude Sonnet 4.5 | ~$0.15–0.35 |
 
-| Provider | Env Variable | Default Model | Notes |
-|----------|-------------|---------------|-------|
-| **Anthropic** (default) | `ANTHROPIC_API_KEY` | `claude-sonnet-4-5-20250514` | Direct API, lowest latency |
-| **OpenRouter** (fallback) | `OPENROUTER_API_KEY` | `anthropic/claude-sonnet-4-5-20250514` | Access to many models |
+The engine auto-detects which key is available. Override with `--provider` and `--model` if needed.
 
-The analyzer auto-detects which key is available. Anthropic is preferred when both are set. Override with `--provider` and `--model` flags.
+---
 
-## What's Inside
+## Repo Structure
 
-| File | Purpose |
-|------|---------|
-| `scripts/scrape_positioning.py` | Browser-based scraper for positioning data extraction |
-| `scripts/analyze_positioning.py` | LLM-powered analysis: extracts positioning, maps territory, generates framework |
-| `scripts/render_positioning.py` | HTML/PDF renderer for the final brief |
-| `scripts/run_pipeline.py` | Convenience wrapper that chains scrape → analyze → render |
-| `SKILL.md` | Claude Code skill definition (interactive workflow) |
-| `references/positioning-frameworks.md` | Moore, Dunford, territory mapping, competitive response patterns |
-| `references/neobank-messaging-map.md` | Pre-researched positioning data for 10+ neobanks and exchanges |
-| `examples/kast-brief.json` | Example output brief (KAST vs Revolut, Crypto.com, Wirex) |
+```
+neobank-positioning-engine/
+├── scripts/
+│   ├── scrape_positioning.py     # Website scraper (Playwright)
+│   ├── analyze_positioning.py    # LLM-powered positioning analysis
+│   ├── render_positioning.py     # HTML/PDF brief renderer
+│   └── run_pipeline.py           # Full pipeline runner
+├── references/
+│   ├── positioning-frameworks.md # Moore, Dunford, territory mapping methodology
+│   └── neobank-messaging-map.md  # Pre-researched data on 12+ neobanks
+├── examples/
+│   ├── kast-brief.json           # Example: KAST vs Revolut, Crypto.com, Wirex
+│   └── avici-brief.json          # Example: Avici vs Bleap, KAST, RedotPay
+├── SKILL.md                      # Claude Code skill definition
+├── requirements.txt
+├── .env.example
+└── LICENSE
+```
 
-## Output
+---
 
-The engine produces a structured brief containing:
+## Example Output
 
-- **Executive summary** — the one-paragraph strategic read
-- **Positioning elements** — for each company: claims, audience, benefits, proof, voice, omissions
-- **Territory map** — companies plotted on four dimensions (audience spectrum, trust model, value core, brand personality)
-- **White space** — unclaimed positioning territories with rationale
-- **Messaging framework** — positioning statements, one-liners, value props, audience-specific copy, what not to say, competitive responses
+Two real positioning briefs are included in `examples/`:
 
-See `examples/kast-brief.json` for the full schema.
+**[KAST vs Revolut, Crypto.com, Wirex](examples/kast-brief.json)** — Found that KAST is the only player that is both crypto-native AND spending-first. "Banking without the bank" is punchy but generic. The unclaimed territory: **stablecoin banking** as a category, not just a feature.
 
-## References
+**[Avici vs Bleap, KAST, RedotPay](examples/avici-brief.json)** — Found that Avici's self-custodial escrow architecture is genuinely unique, but the homepage buries it under generic "spend crypto easily" messaging. The recommended bet: own **the self-custodial internet neobank** positioning before someone else does.
 
-The `references/` folder contains two research docs used as context:
-
-**positioning-frameworks.md** — Moore's positioning statement format, Dunford's five-component framework, territory mapping methodology, common overused claims to avoid, messaging hierarchy, and competitive response patterns.
-
-**neobank-messaging-map.md** — Pre-researched positioning data for KAST, Bleap, Hi, Wirex, RedotPay, Revolut, Nubank, Cash App, N26, Crypto.com, Coinbase, and Bybit MyBank. Includes dimension scores and six unclaimed positioning territories.
+---
 
 ## Built By
 
-[Growgami](https://growgami.com). GTM engineering for crypto and fintech.
+**[Growgami](https://growgami.com)** — GTM engineering for crypto and fintech.
+
+We build positioning strategies, landing pages, and go-to-market systems for crypto companies. This engine is one of the tools we use internally and with clients. If you want a positioning audit done for you, or want to talk about your GTM strategy, reach out at [growgami.com](https://growgami.com).
+
+---
 
 ## License
 
-MIT
+MIT — use it, fork it, build on it.

@@ -4,3 +4,5 @@ __pycache__/
 .env
 .venv/
 context.md
+*.pdf
+/avici-brief.json
