@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dev tools
+        run: pip install ruff mypy
+
+      - name: ruff lint
+        run: ruff check scripts/
+
+      - name: mypy type check
+        run: mypy scripts/ --ignore-missing-imports
+
+  syntax-check:
+    name: Script Syntax Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile scripts/scrape_positioning.py
+          python -m py_compile scripts/analyze_positioning.py
+          python -m py_compile scripts/render_positioning.py
+          python -m py_compile scripts/run_pipeline.py
+          echo "All scripts pass syntax check"
+
+  deps-install:
+    name: Dependency Installation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install system deps for WeasyPrint
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q \
+            libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b \
+            libffi-dev libjpeg-dev libopenjp2-7
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Verify imports
+        run: |
+          python -c "import playwright; print('playwright ok')"
+          python -c "import anthropic; print('anthropic ok')"
+          python -c "import openai; print('openai ok')"
+          python -c "import weasyprint; print('weasyprint ok')"

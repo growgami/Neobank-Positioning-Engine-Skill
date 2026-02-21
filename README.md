@@ -4,9 +4,37 @@
 
 **Find out what your competitors actually claim, what territory they leave open, and exactly how to position against them.**
 
-The Positioning Engine scrapes crypto neobank websites, extracts every positioning signal (headlines, value props, CTAs, proof points, brand voice, and — critically — what they *don't* say), maps the competitive landscape, identifies unclaimed territory, and generates a complete messaging framework with real copy you can use.
+The Positioning Engine scrapes crypto neobank websites, extracts every positioning signal (headlines, value props, CTAs, proof points, brand voice, and — critically — what they _don't_ say), maps the competitive landscape, identifies unclaimed territory, and generates a complete messaging framework with real copy you can use.
 
 This isn't a brand strategy template. Every recommendation traces back to what competitors actually say on their websites and what positioning territory is genuinely unclaimed.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Phase1["Phase 1 — Scrape"]
+        S1[scrape_positioning.py\nPlaywright headless browser]
+        S1 -->|output/{slug}-positioning.json| D1[(Positioning\nJSON)]
+    end
+
+    subgraph Phase2["Phase 2 — Analyze"]
+        D1 --> A1[analyze_positioning.py\nClaude API]
+        REF[references/\nFrameworks + Map] --> A1
+        A1 -->|output/{slug}-brief.json| D2[(Brief\nJSON)]
+    end
+
+    subgraph Phase3["Phase 3 — Render"]
+        D2 --> R1[render_positioning.py\nWeasyPrint]
+        R1 --> PDF[output/{slug}-brief.pdf]
+        R1 --> HTML[output/{slug}-brief.html]
+    end
+
+    Phase1 --> Phase2 --> Phase3
+```
+
+`run_pipeline.py` chains all three stages in one command via `subprocess.run()`.
 
 ---
 
@@ -15,7 +43,7 @@ This isn't a brand strategy template. Every recommendation traces back to what c
 A positioning brief covering:
 
 - **Executive Summary** — The one-paragraph strategic read. Where you stand, what's working, what's not, and the single biggest opportunity.
-- **Positioning Elements** — For each company analyzed: claims, target audience, benefits, proof points, brand voice, CTA language, and omissions (what they *don't* mention is often more revealing).
+- **Positioning Elements** — For each company analyzed: claims, target audience, benefits, proof points, brand voice, CTA language, and omissions (what they _don't_ mention is often more revealing).
 - **Territory Map** — Every company scored on four dimensions: audience spectrum (crypto-native vs mainstream), trust model (self-custody vs custodial), value proposition core (yield vs utility), and brand personality (technical vs lifestyle).
 - **White Space Analysis** — Positioning territories that are unclaimed or weakly held, with evidence for each.
 - **Messaging Framework** — Positioning statements (Geoffrey Moore format), one-liner options, value propositions with proof points, audience-specific messaging, what NOT to say, and competitive response playbooks.
@@ -24,70 +52,130 @@ The output is a structured JSON file that renders into a styled HTML/PDF brief.
 
 ---
 
-## How It Works
+## Installation
 
-Three stages, fully automated:
+### System Dependencies
 
-```
-Scrape  →  Analyze  →  Render
-```
+WeasyPrint requires native libraries. Install before `pip install`.
 
-1. **Scrape** — A headless browser visits each company's website and pulls positioning data: headlines, subheadlines, meta descriptions, CTAs, body copy, and proof points.
-2. **Analyze** — The scraped data is fed to Claude (Anthropic's AI) along with positioning frameworks and competitive intelligence. The AI performs the full analysis: extracting positioning elements, mapping territories, finding white space, and generating the messaging framework.
-3. **Render** — The structured brief is rendered as a clean HTML document and PDF.
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- **Python 3.10+** — [Download Python](https://www.python.org/downloads/) if you don't have it
-- **An API key** — Either an [Anthropic API key](https://console.anthropic.com/) or an [OpenRouter API key](https://openrouter.ai/)
-
-### Setup
+**macOS:**
 
 ```bash
-# Clone the repo
+brew install pango cairo gdk-pixbuf libffi
+```
+
+**Ubuntu / Debian:**
+
+```bash
+sudo apt-get install -y \
+  libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b \
+  libffi-dev libjpeg-dev libopenjp2-7
+```
+
+**Windows:** Use WSL2 with the Ubuntu instructions above.
+
+### Python Setup
+
+```bash
 git clone https://github.com/growgami/Neobank-Positioning-Engine-Skill.git
 cd Neobank-Positioning-Engine-Skill
 
-# Install dependencies
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 playwright install chromium
-
-# Add your API key
-cp .env.example .env
-# Open .env and paste your ANTHROPIC_API_KEY or OPENROUTER_API_KEY
 ```
 
-### Run It
+### Environment Variables
 
-**One command, full pipeline:**
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+| Variable             | Required       | Description                                       |
+| -------------------- | -------------- | ------------------------------------------------- |
+| `ANTHROPIC_API_KEY`  | One of the two | Direct Anthropic API — preferred. ~$0.10–0.20/run |
+| `OPENROUTER_API_KEY` | One of the two | OpenRouter fallback. ~$0.15–0.35/run              |
+
+The engine auto-detects which key is available (Anthropic takes priority). Override with `--provider` and `--model` flags.
+
+---
+
+## Usage
+
+### Full Pipeline (one command)
 
 ```bash
 python scripts/run_pipeline.py "KAST" "https://kast.xyz" \
   --competitors "Revolut:https://revolut.com" "Crypto.com:https://crypto.com"
 ```
 
-This scrapes all websites, runs the analysis, and renders the brief. Output lands in `output/`.
+Output lands in `output/kast-brief.json` and `output/kast-brief.pdf`.
 
-**Or run each stage separately** (useful if you want to re-analyze without re-scraping):
+### Stage by Stage
 
 ```bash
-# Scrape
+# 1. Scrape target + each competitor
 python scripts/scrape_positioning.py "KAST" "https://kast.xyz"
 python scripts/scrape_positioning.py "Revolut" "https://revolut.com"
+python scripts/scrape_positioning.py "Crypto.com" "https://crypto.com"
 
-# Analyze
+# 2. Analyze (re-run without re-scraping to iterate on analysis)
 python scripts/analyze_positioning.py output/kast-positioning.json \
-  --competitors revolut
+  --competitors revolut crypto-com
 
-# Render
+# 3. Render to PDF
 python scripts/render_positioning.py output/kast-brief.json
 ```
 
-**Cost:** Each run costs roughly **$0.10–0.35** in API fees, depending on the model and number of competitors.
+Running stages separately is useful when you want to re-analyze with different instructions without re-scraping (scraping is slow; analysis is fast).
+
+### Optional Flags
+
+| Flag         | Values                    | Default                      |
+| ------------ | ------------------------- | ---------------------------- |
+| `--provider` | `anthropic`, `openrouter` | auto-detected from env       |
+| `--model`    | any model ID              | `claude-sonnet-4-5-20250514` |
+
+---
+
+## Output Format
+
+`output/{slug}-brief.json` — matches the schema in `examples/kast-brief.json`:
+
+```json
+{
+  "company": "KAST",
+  "date": "2026-02-17",
+  "competitors": ["Revolut", "Crypto.com"],
+  "executive_summary": "...",
+  "positioning_elements": { "KAST": { ... }, "Revolut": { ... } },
+  "territory_map": { "dimensions": [...], "scores": { ... } },
+  "white_space": [ { "territory": "...", "evidence": "..." } ],
+  "messaging_framework": {
+    "positioning_statements": [...],
+    "one_liners": [...],
+    "value_propositions": [...],
+    "audience_messaging": [...],
+    "what_not_to_say": [...],
+    "competitive_responses": [...]
+  }
+}
+```
+
+`render_positioning.py` converts this to `output/{slug}-brief.html` and `output/{slug}-brief.pdf`.
+
+---
+
+## Cost
+
+| Provider                | Model             | Cost per Run |
+| ----------------------- | ----------------- | ------------ |
+| Anthropic (recommended) | Claude Sonnet 4.5 | ~$0.10–0.20  |
+| OpenRouter              | Claude Sonnet 4.5 | ~$0.15–0.35  |
+
+Cost scales with the number of competitors (more scraped content = more tokens). 3–5 competitors is the typical range.
 
 ---
 
@@ -109,17 +197,6 @@ Claude will scrape, analyze, and render, pausing for your input at each stage. T
 
 ---
 
-## API Providers
-
-| Provider | Env Variable | Default Model | Cost per Run |
-|----------|-------------|---------------|-------------|
-| **Anthropic** (recommended) | `ANTHROPIC_API_KEY` | Claude Sonnet 4.5 | ~$0.10–0.20 |
-| **OpenRouter** (alternative) | `OPENROUTER_API_KEY` | Claude Sonnet 4.5 | ~$0.15–0.35 |
-
-The engine auto-detects which key is available. Override with `--provider` and `--model` if needed.
-
----
-
 ## Repo Structure
 
 ```
@@ -135,7 +212,11 @@ neobank-positioning-engine/
 ├── examples/
 │   ├── kast-brief.json           # Example: KAST vs Revolut, Crypto.com, Wirex
 │   └── avici-brief.json          # Example: Avici vs Bleap, KAST, RedotPay
+├── .github/workflows/ci.yml      # Ruff, mypy, syntax + dep install checks
 ├── SKILL.md                      # Claude Code skill definition
+├── CLAUDE.md                     # Dev environment and run commands
+├── AGENTS.md                     # Agent invocation guide and error handling
+├── pyproject.toml                # Project metadata, ruff + mypy config
 ├── requirements.txt
 ├── .env.example
 └── LICENSE
